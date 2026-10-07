@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f7efe7">
+<title>Meowdoku V2 🐱</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f7efe7;--card:#fffaf6;--text:#3d3029;--muted:#98877b;
+  --line:#d9c8ba;--thick:#806b5d;--accent:#df8d62;--accent2:#c96d43;
+  --selected:#ffe1cc;--cat:#fff3e8;--x:#8f8178;--danger:#e87575;
+  --shadow:0 5px 22px rgba(75,50,35,.09)
+}
+body.dark{
+  --bg:#211c19;--card:#2d2723;--text:#f8eee8;--muted:#aa9990;
+  --line:#51463f;--thick:#88766a;--accent:#e89b6d;--accent2:#f1ad83;
+  --selected:#54392c;--cat:#4a3329;--x:#b9aaa1;--danger:#ef8b8b;
+  --shadow:0 5px 22px rgba(0,0,0,.25)
+}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{display:flex;justify-content:center}
+.app{width:100%;max-width:560px;min-height:100vh;padding:16px 12px 28px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.brand{display:flex;align-items:center;gap:9px}
+.brand .cat{font-size:34px}
+h1{font-size:25px;margin:0;font-weight:850;letter-spacing:-1px}
+.subtitle{font-size:11px;color:var(--muted);margin-top:1px}
+.icon-btn{width:42px;height:42px;border:0;border-radius:14px;background:var(--card);
+color:var(--text);font-size:20px;box-shadow:var(--shadow)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.stat{background:var(--card);border-radius:13px;padding:7px;text-align:center;box-shadow:var(--shadow)}
+.stat span{display:block;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:800}
+.stat strong{display:block;font-size:15px;margin-top:2px}
+.game-card{background:var(--card);padding:8px;border-radius:20px;box-shadow:var(--shadow)}
+.board{
+  width:100%;aspect-ratio:1;display:grid;grid-template-columns:repeat(7,1fr);
+  grid-template-rows:repeat(7,1fr);gap:2px;background:var(--thick);
+  border:2px solid var(--thick);border-radius:13px;overflow:hidden
+}
+.cell{position:relative;border:0;padding:0;display:flex;align-items:center;justify-content:center;
+font-size:clamp(21px,7vw,34px);font-weight:700;color:var(--text);cursor:pointer;
+transition:filter .12s,transform .08s,outline .1s}
+.cell:active{transform:scale(.95)}
+.cell.selected{outline:3px solid var(--accent);outline-offset:-3px;z-index:2}
+.cell.cat{font-size:clamp(23px,7.5vw,35px)}
+.cell.marked::after{content:"✕";font-size:clamp(20px,6vw,29px);font-weight:900;color:var(--x)}
+.cell.conflict{animation:shake .18s linear 2;filter:saturate(1.35) brightness(.96)}
+.cell.auto-x{opacity:.58}
+.cell.hint{animation:pulse .55s ease 2}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes pulse{50%{filter:brightness(1.25)}}
+.controls{margin-top:10px}
+.mode-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.mode-btn{height:53px;border:0;border-radius:15px;background:var(--card);color:var(--text);
+font-size:16px;font-weight:850;box-shadow:var(--shadow)}
+.mode-btn.active{background:var(--accent);color:white;box-shadow:0 4px 14px rgba(223,141,98,.3)}
+.mode-btn:active,.action-btn:active{transform:scale(.97)}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px}
+.action-btn{height:42px;border:0;border-radius:12px;background:var(--card);color:var(--text);
+font-size:12px;font-weight:800}
+.message{min-height:20px;text-align:center;color:var(--muted);font-size:12px;margin:9px 4px 0}
+.difficulty{display:flex;gap:6px;margin:10px 0}
+.diff{flex:1;border:0;border-radius:11px;padding:8px 4px;background:var(--card);
+color:var(--muted);font-weight:800;font-size:11px}
+.diff.active{background:var(--accent);color:white}
+.legend{display:flex;justify-content:center;gap:13px;color:var(--muted);font-size:10px;margin-top:7px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;
+justify-content:center;padding:20px;z-index:10}
+.modal.show{display:flex}
+.modal-box{max-width:350px;width:100%;background:var(--card);border-radius:24px;
+padding:27px 22px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-cat{font-size:62px}.modal-box h2{margin:7px 0 4px}.modal-box p{color:var(--muted);font-size:14px}
+.modal-buttons{display:flex;gap:8px;margin-top:17px}.modal-buttons button{flex:1;border:0;
+border-radius:13px;padding:12px;font-weight:850}
+.primary{background:var(--accent);color:white}.secondary{background:var(--bg);color:var(--text)}
+@media(min-width:600px){.app{padding-top:28px}.cell{font-size:31px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><div class="cat">🐱</div><div><h1>Meowdoku</h1><div class="subtitle">Um gato por região, linha e coluna</div></div></div>
+  <button class="icon-btn" id="themeBtn">🌙</button>
+</header>
+
+<div class="stats">
+  <div class="stat"><span>Tempo</span><strong id="timer">00:00</strong></div>
+  <div class="stat"><span>Erros</span><strong id="errors">0 / 3</strong></div>
+  <div class="stat"><span>Vitórias</span><strong id="wins">0</strong></div>
+</div>
+
+<div class="game-card"><div class="board" id="board"></div></div>
+
+<div class="legend">
+  <span>🎨 1 gato por região</span><span>↔ 1 por linha</span><span>↕ 1 por coluna</span>
+</div>
+
+<div class="controls">
+  <div class="mode-row">
+    <button class="mode-btn" id="markMode">✕ Marcar</button>
+    <button class="mode-btn" id="catMode">🐱 Gato</button>
+  </div>
+  <div class="actions">
+    <button class="action-btn" id="undoBtn">↶ Desfazer</button>
+    <button class="action-btn" id="hintBtn">💡 Dica</button>
+    <button class="action-btn" id="newBtn">🐾 Novo</button>
+  </div>
+</div>
+
+<div class="difficulty">
+  <button class="diff" data-difficulty="easy">🐱 Fácil</button>
+  <button class="diff active" data-difficulty="medium">😼 Médio</button>
+  <button class="diff" data-difficulty="hard">🙀 Difícil</button>
+</div>
+
+<div class="message" id="message">Escolha Marcar ou Gato para começar.</div>
+</div>
+
+<div class="modal" id="winModal">
+  <div class="modal-box">
+    <div class="modal-cat">😻</div>
+    <h2>Meowdoku resolvido!</h2>
+    <p id="winText"></p>
+    <div class="modal-buttons">
+      <button class="secondary" id="closeModal">Fechar</button>
+      <button class="primary" id="nextGame">🐾 Novo jogo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const N=7, CAT="🐱";
+const palette=["#f6d7c5","#d8e7f2","#dcebd0","#eee0ad","#e1d5ef","#f2d2d9","#cde5dd"];
+const settings={easy:12,medium:18,hard:23};
+
+let regions=[],solution=[],cats=[],marks=[],history=[];
+let selected=-1,mode=null,difficulty="medium",errors=0,seconds=0,finished=false,timer=null;
+let wins=Number(localStorage.getItem("meowdokuV2Wins")||0);
+
+const $=id=>document.getElementById(id);
+$("wins").textContent=wins;
+
+function shuffle(a){
+  a=[...a];
+  for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+  return a;
+}
+
+/* Gera uma solução Latin-square: exatamente um gato por linha e coluna.
+   Depois construímos regiões conectadas em torno dos gatos, garantindo uma
+   região por gato. */
+function generateSolution(){
+  let cols=shuffle([...Array(N).keys()]);
+  return Array.from({length:N},(_,r)=>cols[r]);
+}
+
+function makeRegions(sol){
+  const total=N*N;
+  const reg=Array(total).fill(-1);
+  const seeds=[];
+  const used=new Set();
+  for(let r=0;r<N;r++){
+    let c=sol[r],idx=r*N+c;
+    seeds.push(idx);reg[idx]=r;used.add(idx);
+  }
+
+  // Crescimento conectado: cada região nasce em torno do seu gato.
+  let frontier=Array.from({length:N},(_,r)=>r*N+sol[r]);
+  while(reg.some(x=>x===-1)){
+    frontier=shuffle(frontier);
+    let progressed=false;
+    for(const idx of frontier){
+      const r=Math.floor(idx/N),c=idx%N;
+      const ns=shuffle(neighbors(r,c)).filter(x=>reg[x]===-1);
+      if(ns.length){
+        const x=ns[0];reg[x]=reg[idx];frontier.push(x);progressed=true;
+      }
+    }
+    if(!progressed){
+      // Conecta qualquer célula restante à região adjacente mais próxima.
+      for(let i=0;i<total;i++) if(reg[i]===-1){
+        const r=Math.floor(i/N),c=i%N;
+        const ns=neighbors(r,c).filter(x=>reg[x]>=0);
+        if(ns.length){reg[i]=reg[ns[0]];break}
+      }
+    }
+  }
+  return reg;
+}
+
+function neighbors(r,c){
+  const a=[];
+  if(r>0)a.push((r-1)*N+c);
+  if(r<N-1)a.push((r+1)*N+c);
+  if(c>0)a.push(r*N+c-1);
+  if(c<N-1)a.push(r*N+c+1);
+  return a;
+}
+
+function generatePuzzle(){
+  solution=generateSolution();
+  regions=makeRegions(solution);
+  cats=Array(N*N).fill(false);
+  marks=Array(N*N).fill(false);
+  history=[];
+  selected=-1;mode=null;errors=0;finished=false;seconds=0;
+  $("errors").textContent="0 / 3";$("timer").textContent="00:00";
+  setMessage("Escolha Marcar ou Gato para começar.");
+  render();
+  startTimer();
+}
+
+function regionColor(id){
+  return palette[id%palette.length];
+}
+
+function render(){
+  const board=$("board");board.innerHTML="";
+  for(let i=0;i<N*N;i++){
+    const cell=document.createElement("button");
+    cell.className="cell";
+    cell.style.background=regionColor(regions[i]);
+
+    if(i===selected)cell.classList.add("selected");
+    if(marks[i] && !cats[i])cell.classList.add("marked");
+    if(cats[i]){cell.classList.add("cat");cell.textContent=CAT}
+    if(!cats[i] && !marks[i] && canBeMarked(i)) cell.classList.add("auto-x");
+
+    cell.addEventListener("click",()=>tapCell(i));
+    board.appendChild(cell);
+  }
+}
+
+function canBeMarked(i){
+  // Apenas visual sutil para casas que já são logicamente impossíveis
+  // após colocar gatos. Não grava X automaticamente.
+  if(cats[i])return false;
+  const r=Math.floor(i/N),c=i%N,reg=regions[i];
+  for(let x=0;x<N;x++){
+    if(cats[r*N+x]||cats[x*N+c])return true;
+  }
+  for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+    if(dr===0&&dc===0)continue;
+    let rr=r+dr,cc=c+dc;
+    if(rr>=0&&rr<N&&cc>=0&&cc<N&&cats[rr*N+cc])return true;
+  }
+  // região que já possui gato
+  for(let j=0;j<N*N;j++)if(regions[j]===reg&&cats[j])return true;
+  return false;
+}
+
+function conflicts(i){
+  const r=Math.floor(i/N),c=i%N,reg=regions[i];
+  for(let j=0;j<N*N;j++){
+    if(!cats[j]||j===i)continue;
+    const rr=Math.floor(j/N),cc=j%N;
+    if(rr===r||cc===c||regions[j]===reg)return true;
+    if(Math.abs(rr-r)<=1&&Math.abs(cc-c)<=1)return true;
+  }
+  return false;
+}
+
+function validCat(i){
+  return !conflicts(i);
+}
+
+function tapCell(i){
+  if(finished)return;
+  if(!mode){setMessage("Selecione ✕ Marcar ou 🐱 Gato primeiro.");return}
+  selected=i;
+  if(mode==="mark"){
+    if(cats[i]){setMessage("Essa casa já tem um gato.");render();return}
+    history.push(snapshot());
+    marks[i]=!marks[i];
+    setMessage(marks[i]?"Casa marcada como impossível. ✕":"Marcação removida.");
+    render();return;
+  }
+  if(mode==="cat"){
+    if(marks[i]){setMessage("Essa casa está marcada como impossível. Tire o ✕ primeiro.");render();return}
+    if(cats[i]){
+      history.push(snapshot());cats[i]=false;setMessage("Gato removido.");render();return;
+    }
+    if(!validCat(i)){
+      errors++;$("errors").textContent=`${errors} / 3`;
+      const el=$("board").children[i];el.classList.add("conflict");
+      setMessage("Miau! Essa posição entra em conflito. 😿");
+      setTimeout(()=>el.classList.remove("conflict"),450);
+      if(errors>=3)setMessage("3 erros. Use as marcações ✕ para eliminar possibilidades.");
+      return;
+    }
+    history.push(snapshot());cats[i]=true;marks[i]=false;
+    setMessage("Miau! Posição válida. 🐱");
+    render();checkWin();
+  }
+}
+
+function snapshot(){return {cats:[...cats],marks:[...marks]}}
+function undo(){
+  if(!history.length){setMessage("Nada para desfazer.");return}
+  const s=history.pop();cats=s.cats;marks=s.marks;
+  finished=false;setMessage("Última jogada desfeita.");render();
+}
+
+function giveHint(){
+  if(finished)return;
+  // Coloca uma casa correta que ainda não foi preenchida.
+  const candidates=[];
+  for(let i=0;i<N*N;i++)if(!cats[i]&&!marks[i]&&!conflicts(i)){
+    if(solution[Math.floor(i/N)]===i%N)candidates.push(i);
+  }
+  if(!candidates.length){setMessage("Não encontrei uma dica simples agora.");return}
+  const i=candidates[Math.floor(Math.random()*candidates.length)];
+  history.push(snapshot());cats[i]=true;marks[i]=false;selected=i;
+  render();$("board").children[i].classList.add("hint");
+  setMessage("Uma casa segura foi revelada. 💡");
+  checkWin();
+}
+
+function checkWin(){
+  for(let r=0;r<N;r++){
+    let count=0;
+    for(let c=0;c<N;c++)if(cats[r*N+c])count++;
+    if(count!==1)return;
+  }
+  for(let c=0;c<N;c++){
+    let count=0;
+    for(let r=0;r<N;r++)if(cats[r*N+c])count++;
+    if(count!==1)return;
+  }
+  for(let reg=0;reg<N;reg++){
+    let count=0;
+    for(let i=0;i<N*N;i++)if(regions[i]===reg&&cats[i])count++;
+    if(count!==1)return;
+  }
+  // Regra de não encostar, inclusive diagonal.
+  for(let i=0;i<N*N;i++)if(cats[i]){
+    const r=Math.floor(i/N),c=i%N;
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      if(!dr&&!dc)continue;
+      const rr=r+dr,cc=c+dc;
+      if(rr>=0&&rr<N&&cc>=0&&cc<N&&cats[rr*N+cc])return;
+    }
+  }
+  finish();
+}
+
+function finish(){
+  finished=true;clearInterval(timer);wins++;
+  localStorage.setItem("meowdokuV2Wins",wins);$("wins").textContent=wins;
+  $("winText").textContent=`Você resolveu em ${formatTime(seconds)} com ${errors} erro(s).`;
+  setTimeout(()=>$("winModal").classList.add("show"),250);
+}
+
+function formatTime(s){
+  return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+}
+function startTimer(){
+  clearInterval(timer);
+  timer=setInterval(()=>{if(!finished){seconds++;$("timer").textContent=formatTime(seconds)}},1000);
+}
+function setMode(m){
+  mode=m;
+  $("markMode").classList.toggle("active",m==="mark");
+  $("catMode").classList.toggle("active",m==="cat");
+  setMessage(m==="mark"?"Modo Marcar ativo: toque nas casas impossíveis. ✕":
+    "Modo Gato ativo: toque onde quer colocar um gato. 🐱");
+}
+function setMessage(t){$("message").textContent=t}
+
+$("markMode").onclick=()=>setMode("mark");
+$("catMode").onclick=()=>setMode("cat");
+$("undoBtn").onclick=undo;
+$("hintBtn").onclick=giveHint;
+$("newBtn").onclick=generatePuzzle;
+$("closeModal").onclick=()=>$("winModal").classList.remove("show");
+$("nextGame").onclick=()=>{$("winModal").classList.remove("show");generatePuzzle()};
+
+document.querySelectorAll(".diff").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".diff").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");difficulty=b.dataset.difficulty;generatePuzzle();
+});
+
+$("themeBtn").onclick=()=>{
+  document.body.classList.toggle("dark");
+  const dark=document.body.classList.contains("dark");
+  $("themeBtn").textContent=dark?"☀️":"🌙";
+  localStorage.setItem("meowdokuV2Theme",dark?"dark":"light");
+};
+
+if(localStorage.getItem("meowdokuV2Theme")==="dark"){
+  document.body.classList.add("dark");$("themeBtn").textContent="☀️";
+}
+
+generatePuzzle();
+</script>
+</body>
+</html>
